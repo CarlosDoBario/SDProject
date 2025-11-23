@@ -1,7 +1,7 @@
 package sd.timeseries.common;
 
 /**
- * Constantes do protocolo: opcodes e códigos de status. Usá-las no cliente servidor
+ * Constantes do protocolo: opcodes e códigos de status. Usá-las no cliente e servidor
  */
 public final class Protocol {
     private Protocol() {}
