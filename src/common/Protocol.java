@@ -1,4 +1,4 @@
-package sd.timeseries.common;
+package common;
 
 /**
  * Constantes do protocolo: opcodes e códigos de status. Usá-las no cliente e servidor
