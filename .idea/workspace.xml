@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f712e36a-134f-473f-9ad5-6d9f16c0db34" name="Changes" comment="Implementação do manager de notificação">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="f712e36a-134f-473f-9ad5-6d9f16c0db34" name="Changes" comment="Implementação do servidor principal" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -104,13 +102,31 @@
       <option name="project" value="LOCAL" />
       <updated>1764007142663</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Implementação do handler de conexão">
+      <option name="closed" value="true" />
+      <created>1764007594829</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1764007594829</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Implementação do servidor principal">
+      <option name="closed" value="true" />
+      <created>1764007698837</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1764007698837</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Implementação do manager de persistência" />
     <MESSAGE value="Implementação do manager de agregação" />
     <MESSAGE value="Implementação do manager de notificação" />
-    <option name="LAST_COMMIT_MESSAGE" value="Implementação do manager de notificação" />
+    <MESSAGE value="Implementação do handler de conexão" />
+    <MESSAGE value="Implementação do servidor principal" />
+    <option name="LAST_COMMIT_MESSAGE" value="Implementação do servidor principal" />
   </component>
 </project>
