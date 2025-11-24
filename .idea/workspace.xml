@@ -4,8 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f712e36a-134f-473f-9ad5-6d9f16c0db34" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/server/PersistenceManager.java" afterDir="false" />
+    <list default="true" id="f712e36a-134f-473f-9ad5-6d9f16c0db34" name="Changes" comment="Implementação do manager de notificação">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -81,6 +80,37 @@
       <option name="presentableId" value="Default" />
       <updated>1763914113454</updated>
     </task>
+    <task id="LOCAL-00001" summary="Implementação do manager de persistência">
+      <option name="closed" value="true" />
+      <created>1764006889641</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1764006889641</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Implementação do manager de agregação">
+      <option name="closed" value="true" />
+      <created>1764006992592</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1764006992592</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Implementação do manager de notificação">
+      <option name="closed" value="true" />
+      <created>1764007142663</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1764007142663</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Implementação do manager de persistência" />
+    <MESSAGE value="Implementação do manager de agregação" />
+    <MESSAGE value="Implementação do manager de notificação" />
+    <option name="LAST_COMMIT_MESSAGE" value="Implementação do manager de notificação" />
   </component>
 </project>
