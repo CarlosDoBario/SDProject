@@ -4,7 +4,35 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f712e36a-134f-473f-9ad5-6d9f16c0db34" name="Changes" comment="Implementação da API do cliente" />
+    <list default="true" id="f712e36a-134f-473f-9ad5-6d9f16c0db34" name="Changes" comment="Projeto a corrrer (falta filtragem)">
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/SDProject.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/day-0.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/day-1.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/day-2.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/client/ClientAPI.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/client/ClientConnection.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/common/IOUtils.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/common/Message.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/common/Protocol.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/AggregationManager$PerDayAgg.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/AggregationManager.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/AuthManager.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/ConnectionHandler.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/DayManager$EventListener.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/DayManager.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/MainServer.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/NotificationManager$ConsWaiter.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/NotificationManager$SimWaiter.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/NotificationManager.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/PersistenceManager$EventHandler.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/PersistenceManager.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/server/model/Event.class" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/out/production/SDProject/ui/ConsoleUI.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/server/NotificationManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/server/NotificationManager.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -25,6 +53,9 @@
     &quot;accountId&quot;: &quot;ffcaee1f-5b2b-48db-8a07-8ba89e750b62&quot;
   }
 }</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
@@ -35,6 +66,10 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Application.Consola.executor": "Run",
+    "Application.Consola2.executor": "Run",
+    "Application.MainServer.executor": "Run",
+    "Application.Server.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
@@ -42,7 +77,10 @@
     "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "C:/Users/lenovo/Documents/SDProject",
-    "onboarding.tips.debug.path": "C:/Users/lenovo/IdeaProjects/SDProject/src/src/Main.java"
+    "onboarding.tips.debug.path": "C:/Users/lenovo/IdeaProjects/SDProject/src/src/Main.java",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -50,7 +88,31 @@
       <recent name="C:\Users\lenovo\IdeaProjects\SDProject\src" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Application.Consola">
+    <configuration name="Consola" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="ui.ConsoleUI" />
+      <module name="SDProject" />
+      <option name="PROGRAM_PARAMETERS" value="127.0.0.1 12345" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Consola2" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="ui.ConsoleUI" />
+      <module name="SDProject" />
+      <option name="PROGRAM_PARAMETERS" value="127.0.0.1 12345" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Server" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="server.MainServer" />
+      <module name="SDProject" />
+      <option name="PROGRAM_PARAMETERS" value="12345" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration default="true" type="JetRunConfigurationType">
       <module name="SDProject" />
       <method v="2">
@@ -62,6 +124,11 @@
       <option name="filePath" />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Application.Server" />
+      <item itemvalue="Application.Consola" />
+      <item itemvalue="Application.Consola2" />
+    </list>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -134,8 +201,35 @@
       <option name="project" value="LOCAL" />
       <updated>1764008211028</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Implementação da consolaUI">
+      <option name="closed" value="true" />
+      <created>1764008402367</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1764008402367</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Projeto a corrrer (falta filtragem)">
+      <option name="closed" value="true" />
+      <created>1764012812897</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1764012812897</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Implementação do manager de persistência" />
@@ -145,6 +239,8 @@
     <MESSAGE value="Implementação do servidor principal" />
     <MESSAGE value="Implementação do clientConnection" />
     <MESSAGE value="Implementação da API do cliente" />
-    <option name="LAST_COMMIT_MESSAGE" value="Implementação da API do cliente" />
+    <MESSAGE value="Implementação da consolaUI" />
+    <MESSAGE value="Projeto a corrrer (falta filtragem)" />
+    <option name="LAST_COMMIT_MESSAGE" value="Projeto a corrrer (falta filtragem)" />
   </component>
 </project>

@@ -3,7 +3,6 @@ package server;
 import server.model.Event;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
@@ -11,7 +10,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- NotificationManager
+ * NotificationManager
  */
 public class NotificationManager {
     private final ReentrantLock lock = new ReentrantLock();
@@ -41,9 +40,15 @@ public class NotificationManager {
         boolean done = false;
         String productResult = null;
 
-        ConsWaiter(int n, Condition cond) {
+        // Baseline state recorded at the moment of registration to implement "from now on" semantics
+        String baselineLastProduct;
+        int baselineStreak;
+
+        ConsWaiter(int n, Condition cond, String baselineLastProduct, int baselineStreak) {
             this.n = n;
             this.cond = cond;
+            this.baselineLastProduct = baselineLastProduct;
+            this.baselineStreak = baselineStreak;
         }
     }
 
@@ -56,6 +61,7 @@ public class NotificationManager {
         }
     }
 
+    @SuppressWarnings("unused")
     public NotificationManager() {
         this(null);
     }
@@ -74,11 +80,9 @@ public class NotificationManager {
                 streak = 1;
             }
 
-            // acorda simultaneous waiters se satisfeitos
+            // acorda simultaneous waiters se satisfeitos (mantemos re-check pattern para evitar missed-signal)
             if (wasNew) {
-                Iterator<SimWaiter> it = simWaiters.iterator();
-                while (it.hasNext()) {
-                    SimWaiter w = it.next();
+                for (SimWaiter w : simWaiters) {
                     if (!w.done && seenProducts.contains(w.p1) && seenProducts.contains(w.p2)) {
                         w.result = true;
                         w.done = true;
@@ -87,11 +91,20 @@ public class NotificationManager {
                 }
             }
 
-            // acorda consecutive waiters se o streak for suficiente
-            Iterator<ConsWaiter> it2 = consWaiters.iterator();
-            while (it2.hasNext()) {
-                ConsWaiter w = it2.next();
-                if (!w.done && streak >= w.n) {
+            // acorda consecutive waiters com semântica "a partir do registo"
+            for (ConsWaiter w : consWaiters) {
+                if (w.done) continue;
+
+                int effectiveStreak;
+                if (lastProduct != null && lastProduct.equals(w.baselineLastProduct)) {
+                    // se o produto atual é o mesmo que no registo, só contamos o incremento ocorrido depois do registo
+                    effectiveStreak = streak - w.baselineStreak;
+                } else {
+                    // se o produto mudou desde o registo, a streak actual corresponde a eventos ocorridos após o registo
+                    effectiveStreak = streak;
+                }
+
+                if (effectiveStreak >= w.n) {
                     w.productResult = lastProduct;
                     w.done = true;
                     w.cond.signal();
@@ -102,15 +115,23 @@ public class NotificationManager {
         }
     }
 
-    // Espera até ambos os produtos serem vendidos no dia atual, ou até o dia terminar.
+    // Espera até ambos os produtos serem vendidos no dia corrente, ou até o dia terminar.
     // Retorna true se aconteceu antes do fim do dia, false caso contrário.
     public boolean waitSimultaneous(String product1, String product2) throws InterruptedException {
         lock.lock();
         try {
+            // não satisfazir imediatamente aqui - manter a recheck pattern: se já estiverem ambos, devolvemos true
             if (seenProducts.contains(product1) && seenProducts.contains(product2)) return true;
             Condition cond = lock.newCondition();
             SimWaiter waiter = new SimWaiter(product1, product2, cond);
             simWaiters.add(waiter);
+            // re-check imediata para evitar missed-signal
+            if (seenProducts.contains(product1) && seenProducts.contains(product2)) {
+                waiter.done = true;
+                waiter.result = true;
+                simWaiters.remove(waiter);
+                return true;
+            }
             int myGen = dayGeneration;
             try {
                 while (!waiter.done && myGen == dayGeneration) {
@@ -125,16 +146,17 @@ public class NotificationManager {
         }
     }
 
-    // Espera até ocorrer n vendas consecutivas do mesmo produto no dia atual
-    // Retorna productName se aconteceu antes do fim do dia, null caso contrário.
+    // Espera até ocorrer n vendas consecutivas do mesmo produto no dia corrente,
+    // contando apenas vendas que ocorram depois do registo do waiter.
     public String waitConsecutive(int n) throws InterruptedException {
         if (n <= 0) throw new IllegalArgumentException("n must be >= 1");
         lock.lock();
         try {
-            if (streak >= n && lastProduct != null) return lastProduct;
             Condition cond = lock.newCondition();
-            ConsWaiter waiter = new ConsWaiter(n, cond);
+            // Regista baseline para "a partir do agora" semantics
+            ConsWaiter waiter = new ConsWaiter(n, cond, lastProduct, streak);
             consWaiters.add(waiter);
+
             int myGen = dayGeneration;
             try {
                 while (!waiter.done && myGen == dayGeneration) {
