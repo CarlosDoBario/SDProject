@@ -5,10 +5,10 @@ import client.ClientConnection;
 
 import java.time.Instant;
 import java.util.Scanner;
-import java.util.concurrent.TimeoutException;
 
 /**
- ConsoleUI - interface de consola simples para testar o servidor via ClientAPI.
+ * ConsoleUI - interface de consola adaptada para a ClientAPI síncrona.
+ * Removidas referências a TimeoutException e APIs de concorrência.
  */
 public class ConsoleUI {
     private final String host;
@@ -21,6 +21,7 @@ public class ConsoleUI {
 
     public void run() {
         try (Scanner sc = new Scanner(System.in)) {
+            // ClientConnection e ClientAPI agora gerem a comunicação de forma simples e síncrona
             try (ClientConnection conn = new ClientConnection(host, port);
                  ClientAPI api = new ClientAPI(conn)) {
 
@@ -41,7 +42,7 @@ public class ConsoleUI {
                             String rp = sc.nextLine().trim();
                             try {
                                 boolean ok = api.register(ru, rp);
-                                System.out.println("Register: " + ok);
+                                System.out.println("Register status: " + ok);
                             } catch (Exception e) {
                                 System.err.println("Register failed: " + e.getMessage());
                             }
@@ -53,7 +54,7 @@ public class ConsoleUI {
                             String lp = sc.nextLine().trim();
                             try {
                                 boolean ok = api.login(lu, lp);
-                                System.out.println("Login: " + ok);
+                                System.out.println("Login successful: " + ok);
                             } catch (Exception e) {
                                 System.err.println("Login failed: " + e.getMessage());
                             }
@@ -68,7 +69,7 @@ public class ConsoleUI {
                             long ts = Instant.now().toEpochMilli();
                             try {
                                 long ack = api.addEvent(p, q, price, ts);
-                                System.out.println("Event added, ackTime=" + ack);
+                                System.out.println("Event added, server ackTime=" + ack);
                             } catch (Exception e) {
                                 System.err.println("addEvent failed: " + e.getMessage());
                             }
@@ -76,7 +77,7 @@ public class ConsoleUI {
                         case "4": // advance day
                             try {
                                 int idx = api.advanceDay();
-                                System.out.println("Advanced. Closed day index: " + idx);
+                                System.out.println("Day advanced. Closed day index: " + idx);
                             } catch (Exception e) {
                                 System.err.println("advanceDay failed: " + e.getMessage());
                             }
@@ -88,9 +89,9 @@ public class ConsoleUI {
                             int ad = Integer.parseInt(sc.nextLine().trim());
                             try {
                                 int res = api.aggregateQuantity(ap, ad);
-                                System.out.println("Quantity(last " + ad + "): " + res);
+                                System.out.println("Total Quantity (last " + ad + " days): " + res);
                             } catch (Exception e) {
-                                System.err.println("aggregateQuantity failed: " + e.getMessage());
+                                System.err.println("Aggregation failed: " + e.getMessage());
                             }
                             break;
                         case "6": // agg volume
@@ -100,9 +101,9 @@ public class ConsoleUI {
                             int avd = Integer.parseInt(sc.nextLine().trim());
                             try {
                                 double res = api.aggregateVolume(avp, avd);
-                                System.out.println("Volume(last " + avd + "): " + res);
+                                System.out.println("Total Volume (last " + avd + " days): " + res);
                             } catch (Exception e) {
-                                System.err.println("aggregateVolume failed: " + e.getMessage());
+                                System.err.println("Aggregation failed: " + e.getMessage());
                             }
                             break;
                         case "7": // agg avg price
@@ -112,9 +113,9 @@ public class ConsoleUI {
                             int aad = Integer.parseInt(sc.nextLine().trim());
                             try {
                                 double res = api.aggregateAvgPrice(aap, aad);
-                                System.out.println("AvgPrice(last " + aad + "): " + res);
+                                System.out.println("Average Price (last " + aad + " days): " + res);
                             } catch (Exception e) {
-                                System.err.println("aggregateAvgPrice failed: " + e.getMessage());
+                                System.err.println("Aggregation failed: " + e.getMessage());
                             }
                             break;
                         case "8": // agg max price
@@ -124,9 +125,9 @@ public class ConsoleUI {
                             int amd = Integer.parseInt(sc.nextLine().trim());
                             try {
                                 double res = api.aggregateMaxPrice(amp, amd);
-                                System.out.println("MaxPrice(last " + amd + "): " + res);
+                                System.out.println("Maximum Price (last " + amd + " days): " + res);
                             } catch (Exception e) {
-                                System.err.println("aggregateMaxPrice failed: " + e.getMessage());
+                                System.err.println("Aggregation failed: " + e.getMessage());
                             }
                             break;
                         case "9": // wait simultaneous
@@ -134,32 +135,22 @@ public class ConsoleUI {
                             String w1 = sc.nextLine().trim();
                             System.out.print("product2: ");
                             String w2 = sc.nextLine().trim();
-                            System.out.print("timeoutSeconds (0 = default): ");
-                            long wt = Long.parseLong(sc.nextLine().trim());
                             try {
-                                boolean res;
-                                if (wt <= 0) res = api.waitSimultaneous(w1, w2);
-                                else res = api.waitSimultaneous(w1, w2, wt * 1000);
-                                System.out.println("waitSimultaneous result: " + res);
-                            } catch (TimeoutException te) {
-                                System.err.println("Timeout waiting: " + te.getMessage());
+                                System.out.println("Waiting for simultaneous events...");
+                                boolean res = api.waitSimultaneous(w1, w2);
+                                System.out.println("waitSimultaneous occurred: " + res);
                             } catch (Exception e) {
                                 System.err.println("waitSimultaneous failed: " + e.getMessage());
                             }
                             break;
                         case "10": // wait consecutive
-                            System.out.print("n: ");
+                            System.out.print("n (consecutive sales): ");
                             int n = Integer.parseInt(sc.nextLine().trim());
-                            System.out.print("timeoutSeconds (0 = default): ");
-                            long cto = Long.parseLong(sc.nextLine().trim());
                             try {
-                                String prod;
-                                if (cto <= 0) prod = api.waitConsecutive(n);
-                                else prod = api.waitConsecutive(n, cto * 1000);
+                                System.out.println("Waiting for consecutive sales...");
+                                String prod = api.waitConsecutive(n);
                                 if (prod != null) System.out.println("Occurred for product: " + prod);
-                                else System.out.println("Did not occur before day end");
-                            } catch (TimeoutException te) {
-                                System.err.println("Timeout waiting: " + te.getMessage());
+                                else System.out.println("Did not occur before day end.");
                             } catch (Exception e) {
                                 System.err.println("waitConsecutive failed: " + e.getMessage());
                             }
@@ -179,18 +170,12 @@ public class ConsoleUI {
     }
 
     private void printMenu() {
-        System.out.println();
-        System.out.println("=== Console UI ===");
-        System.out.println("1) Register");
-        System.out.println("2) Login");
-        System.out.println("3) Add event");
-        System.out.println("4) Advance day");
-        System.out.println("5) Aggregate - Quantity");
-        System.out.println("6) Aggregate - Volume");
-        System.out.println("7) Aggregate - AvgPrice");
-        System.out.println("8) Aggregate - MaxPrice");
-        System.out.println("9) Wait Simultaneous");
-        System.out.println("10) Wait Consecutive");
+        System.out.println("\n=== TSDB CONSOLE UI ===");
+        System.out.println("1) Register          2) Login");
+        System.out.println("3) Add Event         4) Advance Day");
+        System.out.println("5) Agg: Quantity     6) Agg: Volume");
+        System.out.println("7) Agg: Avg Price    8) Agg: Max Price");
+        System.out.println("9) Wait Simultaneous 10) Wait Consecutive");
         System.out.println("x) Exit");
     }
 

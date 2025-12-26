@@ -7,23 +7,24 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
- - Servir pedidos de agregação (quantidade, volume, avg price, max price) para um produto nos últimos d dias
- (exclui o dia atual).
- - Cálculo lazy por dia + cache com limite S (LRU por dia).
+ * AgregationManager adaptado:
+ * - Remoção de blocos synchronized.
+ * - Uso de ReentrantLock e Condition para gestão de cache e carregamentos.
  */
 public class AggregationManager {
     private final DayManager dayManager;
     private final PersistenceManager persistenceManager;
 
-    // Configuráveis
-    private final int D; // número máximo de dias a considerar (história)
-    private final int S; // número máximo de séries em memória (dias)
+    private final int D;
+    private final int S;
 
     private static final class PerDayAgg {
         int quantity = 0;
-        double volume = 0.0; // sum(price * quantity)
+        double volume = 0.0;
         double maxPrice = 0.0;
         int countEvents = 0;
 
@@ -37,8 +38,10 @@ public class AggregationManager {
         }
     }
 
-    // dayCache: LinkedHashMap com a estratégia LRU (chave = dayIndex, valor = mapa product->PerDayAgg)
-    // Protegido por sincronização em dayCache.
+    // Lock para proteger a cache e o conjunto de dias em carregamento
+    private final ReentrantLock cacheLock = new ReentrantLock();
+    private final Condition loadFinished = cacheLock.newCondition();
+
     private final LinkedHashMap<Integer, Map<String, PerDayAgg>> dayCache = new LinkedHashMap<>(16, 0.75f, true);
     private final java.util.HashSet<Integer> loadingDays = new java.util.HashSet<>();
 
@@ -55,82 +58,78 @@ public class AggregationManager {
         this.persistenceManager = persistenceManager;
     }
 
-    // Carrega/obtém as estatísticas para um dado produto num dia específico.
-    // Se S==0 não mantém em cache; caso contrário tenta inserir no cache respeitando a capacidade S.
     private PerDayAgg getPerDayAggForProduct(int dayIndex, String product) throws IOException {
-        // verificação rápida na cache
-        synchronized (dayCache) {
-            Map<String, PerDayAgg> map = dayCache.get(dayIndex);
-            if (map != null) {
-                PerDayAgg p = map.get(product);
-                if (p != null) return p;
-            }
-            // Se outra thread estiver a carregar este dia, espera
-            if (loadingDays.contains(dayIndex)) {
-                try {
-                    while (loadingDays.contains(dayIndex)) {
-                        dayCache.wait();
-                    }
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    return new PerDayAgg();
-                }
-                map = dayCache.get(dayIndex);
+        cacheLock.lock();
+        try {
+            while (true) {
+                Map<String, PerDayAgg> map = dayCache.get(dayIndex);
                 if (map != null) {
                     PerDayAgg p = map.get(product);
                     if (p != null) return p;
                 }
-                // caso não exista, irá continuar para carregar
-            } else {
-                // marca como a carregar
-                loadingDays.add(dayIndex);
-            }
-        }
 
-        // Carregar do disco (streaming), apenas computar para o produto pedido
-        PerDayAgg agg = new PerDayAgg();
-        if (persistenceManager.dayExists(dayIndex)) {
-            persistenceManager.streamDay(dayIndex, e -> {
-                if (product.equals(e.getProductName())) {
-                    agg.incorporate(e);
-                }
-            });
-        }
-
-        // Depois de carregar, decidir cachear ou não
-        synchronized (dayCache) {
-            loadingDays.remove(dayIndex);
-            if (S > 0) {
-                Map<String, PerDayAgg> map = dayCache.get(dayIndex);
-                if (map == null) {
-                    // garantir capacidade S (evict LRU se necessário)
-                    while (dayCache.size() >= S) {
-                        Iterator<Integer> it = dayCache.keySet().iterator();
-                        if (it.hasNext()) {
-                            it.next();
-                            it.remove();
-                        } else {
-                            break;
-                        }
+                if (!loadingDays.contains(dayIndex)) {
+                    // Ninguém está a carregar este dia, esta thread assume a tarefa
+                    loadingDays.add(dayIndex);
+                    break;
+                } else {
+                    // Outra thread está a carregar, aguardamos na Condition
+                    try {
+                        loadFinished.await();
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return new PerDayAgg();
                     }
-                    map = new HashMap<>();
-                    dayCache.put(dayIndex, map);
                 }
-                map.put(product, agg);
             }
-            dayCache.notifyAll();
+        } finally {
+            cacheLock.unlock();
+        }
+
+        // Fora do lock: Carregar do disco (IO demorado)
+        PerDayAgg agg = new PerDayAgg();
+        try {
+            if (persistenceManager.dayExists(dayIndex)) {
+                persistenceManager.streamDay(dayIndex, e -> {
+                    if (product.equals(e.getProductName())) {
+                        agg.incorporate(e);
+                    }
+                });
+            }
+        } finally {
+            // Re-entrar no lock para atualizar a cache e sinalizar outras threads
+            cacheLock.lock();
+            try {
+                loadingDays.remove(dayIndex);
+                if (S > 0) {
+                    Map<String, PerDayAgg> map = dayCache.get(dayIndex);
+                    if (map == null) {
+                        while (dayCache.size() >= S) {
+                            Iterator<Integer> it = dayCache.keySet().iterator();
+                            if (it.hasNext()) {
+                                it.next();
+                                it.remove();
+                            } else break;
+                        }
+                        map = new HashMap<>();
+                        dayCache.put(dayIndex, map);
+                    }
+                    map.put(product, agg);
+                }
+                loadFinished.signalAll();
+            } finally {
+                cacheLock.unlock();
+            }
         }
 
         return agg;
     }
 
-    // Normaliza o intervalo de dias pedidos: devolve array com índices dos dias anteriores (exclui dia atual).
     private int[] targetDays(int d) {
         if (d <= 0) throw new IllegalArgumentException("d must be >= 1");
         if (d > D) d = D;
         int current = dayManager.getDayIndex();
-        int maxAvailable = current;
-        int actual = Math.min(d, maxAvailable);
+        int actual = Math.min(d, current);
         int[] days = new int[actual];
         for (int i = 0; i < actual; i++) {
             days[i] = current - 1 - i;
@@ -141,8 +140,7 @@ public class AggregationManager {
     public int aggregateQuantity(String productName, int d) throws IOException {
         int total = 0;
         for (int day : targetDays(d)) {
-            PerDayAgg p = getPerDayAggForProduct(day, productName);
-            total += p.quantity;
+            total += getPerDayAggForProduct(day, productName).quantity;
         }
         return total;
     }
@@ -150,8 +148,7 @@ public class AggregationManager {
     public double aggregateVolume(String productName, int d) throws IOException {
         double total = 0.0;
         for (int day : targetDays(d)) {
-            PerDayAgg p = getPerDayAggForProduct(day, productName);
-            total += p.volume;
+            total += getPerDayAggForProduct(day, productName).volume;
         }
         return total;
     }
@@ -164,8 +161,7 @@ public class AggregationManager {
             totalQty += p.quantity;
             totalVolume += p.volume;
         }
-        if (totalQty == 0) return 0.0;
-        return totalVolume / totalQty;
+        return (totalQty == 0) ? 0.0 : totalVolume / totalQty;
     }
 
     public double aggregateMaxPrice(String productName, int d) throws IOException {
@@ -181,10 +177,12 @@ public class AggregationManager {
         return any ? max : 0.0;
     }
 
-    // Limpa a cache
     public void clearCache() {
-        synchronized (dayCache) {
+        cacheLock.lock();
+        try {
             dayCache.clear();
+        } finally {
+            cacheLock.unlock();
         }
     }
 }

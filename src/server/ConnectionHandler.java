@@ -8,16 +8,14 @@ import server.model.Event;
 import java.io.*;
 import java.net.Socket;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
- Estratégia:
-  - Loop principal lê mensagens do socket (Message.readFrom).
-  - Cada pedido é enviado para um worker thread (executor) para processamento, permitindo que a thread de leitura
-    continue a receber novas mensagens (suporta múltiplos pedidos em paralelo por conexão).
-  - Escrita ao DataOutputStream é sincronizada usando outLock para evitar interleaving.
+ * Estratégia:
+ * - Loop principal lê mensagens do socket (Message.readFrom).
+ * - Cada pedido é processado numa nova Thread manual (em vez de ExecutorService).
+ * - Estado de autenticação protegido por stateLock (em vez de AtomicBoolean).
+ * - Escrita ao DataOutputStream sincronizada com outLock (ReentrantLock).
  */
 public class ConnectionHandler implements Runnable {
     private final Socket socket;
@@ -27,11 +25,11 @@ public class ConnectionHandler implements Runnable {
     private final AggregationManager aggregationManager;
     private final NotificationManager notificationManager;
 
-    private final AtomicBoolean authenticated = new AtomicBoolean(false);
-    private String username = null;
+    private final ReentrantLock stateLock = new ReentrantLock();
+    private final ReentrantLock outLock = new ReentrantLock();
 
-    // executor para processar pedidos de forma concorrente por conexão
-    private final ExecutorService workerPool = Executors.newFixedThreadPool(4);
+    private boolean authenticated = false;
+    private String username = null;
 
     public ConnectionHandler(Socket socket,
                              AuthManager authManager,
@@ -49,274 +47,221 @@ public class ConnectionHandler implements Runnable {
 
     @Override
     public void run() {
-        final Object outLock = new Object();
         try (DataInputStream din = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
              DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()))) {
 
             while (!socket.isClosed()) {
                 Message req = Message.readFrom(din);
-                if (req == null) break; // EOF
+                if (req == null) break;
 
-                final int reqId = req.getRequestId();
-                final byte op = req.getOpCode();
-                final byte[] payload = req.getPayload();
-
-                // handling para a worker pool para que o read loop possa continuar
-                workerPool.submit(() -> {
+                // Processamento concorrente por conexão via Threads manuais
+                new Thread(() -> {
                     try {
-                        switch (op) {
-                            case Protocol.REGISTER:
-                                handleRegister(reqId, payload, dout, outLock);
-                                break;
-                            case Protocol.LOGIN:
-                                handleLogin(reqId, payload, dout, outLock);
-                                break;
-                            case Protocol.ADD_EVENT:
-                                handleAddEvent(reqId, payload, dout, outLock);
-                                break;
-                            case Protocol.ADVANCE_DAY:
-                                handleAdvanceDay(reqId, payload, dout, outLock);
-                                break;
-                            case Protocol.AGG_QUANTITY:
-                            case Protocol.AGG_VOLUME:
-                            case Protocol.AGG_AVG_PRICE:
-                            case Protocol.AGG_MAX_PRICE:
-                                handleAggregation(reqId, op, payload, dout, outLock);
-                                break;
-                            case Protocol.WAIT_SIMULTANEOUS:
-                                handleWaitSimultaneous(reqId, payload, dout, outLock);
-                                break;
-                            case Protocol.WAIT_CONSECUTIVE:
-                                handleWaitConsecutive(reqId, payload, dout, outLock);
-                                break;
-                            default:
-                                writeError(dout, outLock, reqId, Protocol.STATUS_INVALID_REQUEST, "OpCode not supported");
-                                break;
-                        }
+                        handleRequest(req, dout);
                     } catch (IOException ioe) {
-                        // Problema ao escrever resposta: provavelmente socket fechado; registamos e tentamos fechar recurso
-                        System.err.println("I/O error handling request " + reqId + ": " + ioe.getMessage());
-                        try {
-                            socket.close();
-                        } catch (IOException ignored) {}
+                        System.err.println("I/O error handling request: " + ioe.getMessage());
+                        try { socket.close(); } catch (IOException ignored) {}
                     } catch (Throwable t) {
-                        System.err.println("Unexpected error handling request " + reqId + ": " + t.getMessage());
-                        try {
-                            writeError(dout, outLock, reqId, Protocol.STATUS_INTERNAL_ERROR, "Server error");
-                        } catch (IOException ignored) {}
+                        System.err.println("Unexpected error: " + t.getMessage());
                     }
-                });
+                }).start();
             }
         } catch (IOException e) {
             System.err.println("Connection I/O error: " + e.getMessage());
         } finally {
-            // "matar" workers para esta conexão e fechar socket
-            try {
-                workerPool.shutdownNow();
-            } catch (Exception ignored) {}
             try { socket.close(); } catch (IOException ignored) {}
         }
     }
 
-    // Handlers
+    private void handleRequest(Message req, DataOutputStream dout) throws IOException {
+        int reqId = req.getRequestId();
+        byte op = req.getOpCode();
+        byte[] payload = req.getPayload();
 
-    private void handleRegister(int reqId, byte[] payload, DataOutputStream dout, Object outLock) throws IOException {
+        switch (op) {
+            case Protocol.REGISTER:
+                handleRegister(reqId, payload, dout);
+                break;
+            case Protocol.LOGIN:
+                handleLogin(reqId, payload, dout);
+                break;
+            case Protocol.ADD_EVENT:
+                handleAddEvent(reqId, payload, dout);
+                break;
+            case Protocol.ADVANCE_DAY:
+                handleAdvanceDay(reqId, payload, dout);
+                break;
+            case Protocol.AGG_QUANTITY:
+            case Protocol.AGG_VOLUME:
+            case Protocol.AGG_AVG_PRICE:
+            case Protocol.AGG_MAX_PRICE:
+                handleAggregation(reqId, op, payload, dout);
+                break;
+            case Protocol.WAIT_SIMULTANEOUS:
+                handleWaitSimultaneous(reqId, payload, dout);
+                break;
+            case Protocol.WAIT_CONSECUTIVE:
+                handleWaitConsecutive(reqId, payload, dout);
+                break;
+            default:
+                writeError(dout, reqId, Protocol.STATUS_INVALID_REQUEST, "OpCode not supported");
+                break;
+        }
+    }
+
+    private void handleRegister(int reqId, byte[] payload, DataOutputStream dout) throws IOException {
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));
         String user = IOUtils.readString(in);
         String pass = IOUtils.readString(in);
-        if (user == null || pass == null) {
-            writeError(dout, outLock, reqId, Protocol.STATUS_INVALID_REQUEST, "username/password required");
-            return;
-        }
+
         boolean created = authManager.register(user, pass);
         if (created) {
-            // OK
-            ByteArrayOutputStream bout = new ByteArrayOutputStream();
-            DataOutputStream body = new DataOutputStream(bout);
-            body.writeByte(Protocol.STATUS_OK);
-            body.flush();
-            synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
+            sendSimpleResponse(dout, reqId, Protocol.STATUS_OK);
         } else {
-            writeError(dout, outLock, reqId, Protocol.STATUS_ALREADY_EXISTS, "User already exists");
+            writeError(dout, reqId, Protocol.STATUS_ALREADY_EXISTS, "User already exists");
         }
     }
 
-    private void handleLogin(int reqId, byte[] payload, DataOutputStream dout, Object outLock) throws IOException {
+    private void handleLogin(int reqId, byte[] payload, DataOutputStream dout) throws IOException {
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));
         String user = IOUtils.readString(in);
         String pass = IOUtils.readString(in);
-        if (user == null || pass == null) {
-            writeError(dout, outLock, reqId, Protocol.STATUS_INVALID_REQUEST, "username/password required");
-            return;
-        }
+
         boolean ok = authManager.login(user, pass);
         if (ok) {
-            authenticated.set(true);
-            username = user;
-            ByteArrayOutputStream bout = new ByteArrayOutputStream();
-            DataOutputStream body = new DataOutputStream(bout);
-            body.writeByte(Protocol.STATUS_OK);
-            IOUtils.writeString(body, "welcome");
-            body.flush();
-            synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
+            stateLock.lock();
+            try {
+                this.authenticated = true;
+                this.username = user;
+            } finally {
+                stateLock.unlock();
+            }
+            sendSimpleResponse(dout, reqId, Protocol.STATUS_OK);
         } else {
-            writeError(dout, outLock, reqId, Protocol.STATUS_INVALID_CREDENTIALS, "Invalid username/password");
+            writeError(dout, reqId, Protocol.STATUS_INVALID_CREDENTIALS, "Invalid credentials");
         }
     }
 
-    private void handleAddEvent(int reqId, byte[] payload, DataOutputStream dout, Object outLock) throws IOException {
-        if (!authenticated.get()) {
-            writeError(dout, outLock, reqId, Protocol.STATUS_AUTH_REQUIRED, "Authenticate first");
-            return;
-        }
+    private void handleAddEvent(int reqId, byte[] payload, DataOutputStream dout) throws IOException {
+        if (!checkAuth(dout, reqId)) return;
+
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));
-        String product = IOUtils.readString(in);
-        int qty = in.readInt();
-        double price = in.readDouble();
-        long ts = in.readLong();
-        Event e = new Event(product, qty, price, ts);
+        Event e = new Event(IOUtils.readString(in), in.readInt(), in.readDouble(), in.readLong());
         dayManager.addEvent(e);
 
-        // responde OK com ackTime
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         DataOutputStream body = new DataOutputStream(bout);
         body.writeByte(Protocol.STATUS_OK);
         body.writeLong(System.currentTimeMillis());
-        body.flush();
-        synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
+
+        writeMessage(dout, reqId, Protocol.RESPONSE, bout.toByteArray());
     }
 
-    private void handleAdvanceDay(int reqId, byte[] payload, DataOutputStream dout, Object outLock) throws IOException {
-        if (!authenticated.get()) {
-            writeError(dout, outLock, reqId, Protocol.STATUS_AUTH_REQUIRED, "Authenticate first");
-            return;
-        }
-        // fecha o dia útil e grava/persiste
+    private void handleAdvanceDay(int reqId, byte[] payload, DataOutputStream dout) throws IOException {
+        if (!checkAuth(dout, reqId)) return;
+
         List<Event> toPersist = dayManager.closeCurrentDayAndStartNew();
-        int closedDayIndex = dayManager.getDayIndex() - 1; // index of the day we just closed
-        try {
-            persistenceManager.persistDay(closedDayIndex, toPersist);
-        } catch (IOException ioe) {
-            writeError(dout, outLock, reqId, Protocol.STATUS_INTERNAL_ERROR, "Persist failed: " + ioe.getMessage());
-            return;
-        }
-        // notificar os waiters
+        int closedDay = dayManager.getDayIndex() - 1;
+        persistenceManager.persistDay(closedDay, toPersist);
+
         if (notificationManager != null) notificationManager.signalDayAdvanced();
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         DataOutputStream body = new DataOutputStream(bout);
         body.writeByte(Protocol.STATUS_OK);
-        body.writeInt(closedDayIndex);
-        body.writeLong(System.currentTimeMillis());
-        body.flush();
-        synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
+        body.writeInt(closedDay);
+
+        writeMessage(dout, reqId, Protocol.RESPONSE, bout.toByteArray());
     }
 
-    private void handleAggregation(int reqId, byte op, byte[] payload, DataOutputStream dout, Object outLock) throws IOException {
-        if (!authenticated.get()) {
-            writeError(dout, outLock, reqId, Protocol.STATUS_AUTH_REQUIRED, "Authenticate first");
-            return;
-        }
+    private void handleAggregation(int reqId, byte op, byte[] payload, DataOutputStream dout) throws IOException {
+        if (!checkAuth(dout, reqId)) return;
+
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));
         String product = IOUtils.readString(in);
-        int d = in.readInt();
-        try {
-            if (op == Protocol.AGG_QUANTITY) {
-                int q = aggregationManager.aggregateQuantity(product, d);
-                ByteArrayOutputStream bout = new ByteArrayOutputStream();
-                DataOutputStream body = new DataOutputStream(bout);
-                body.writeByte(Protocol.STATUS_OK);
-                body.writeInt(q);
-                body.flush();
-                synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
-            } else if (op == Protocol.AGG_VOLUME) {
-                double v = aggregationManager.aggregateVolume(product, d);
-                ByteArrayOutputStream bout = new ByteArrayOutputStream();
-                DataOutputStream body = new DataOutputStream(bout);
-                body.writeByte(Protocol.STATUS_OK);
-                body.writeDouble(v);
-                body.flush();
-                synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
-            } else if (op == Protocol.AGG_AVG_PRICE) {
-                double avg = aggregationManager.aggregateAvgPrice(product, d);
-                ByteArrayOutputStream bout = new ByteArrayOutputStream();
-                DataOutputStream body = new DataOutputStream(bout);
-                body.writeByte(Protocol.STATUS_OK);
-                body.writeDouble(avg);
-                body.flush();
-                synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
-            } else if (op == Protocol.AGG_MAX_PRICE) {
-                double max = aggregationManager.aggregateMaxPrice(product, d);
-                ByteArrayOutputStream bout = new ByteArrayOutputStream();
-                DataOutputStream body = new DataOutputStream(bout);
-                body.writeByte(Protocol.STATUS_OK);
-                body.writeDouble(max);
-                body.flush();
-                synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
-            }
-        } catch (IOException ioe) {
-            writeError(dout, outLock, reqId, Protocol.STATUS_INTERNAL_ERROR, "Aggregation IO error: " + ioe.getMessage());
-        }
-    }
+        int days = in.readInt();
 
-    private void handleWaitSimultaneous(int reqId, byte[] payload, DataOutputStream dout, Object outLock) throws IOException {
-        if (!authenticated.get()) {
-            writeError(dout, outLock, reqId, Protocol.STATUS_AUTH_REQUIRED, "Authenticate first");
-            return;
-        }
-        DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));
-        String p1 = IOUtils.readString(in);
-        String p2 = IOUtils.readString(in);
-        boolean result = false;
-        try {
-            result = notificationManager.waitSimultaneous(p1, p2);
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            writeError(dout, outLock, reqId, Protocol.STATUS_INTERNAL_ERROR, "Interrupted");
-            return;
-        }
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         DataOutputStream body = new DataOutputStream(bout);
         body.writeByte(Protocol.STATUS_OK);
-        body.writeByte(result ? (byte)1 : (byte)0);
-        body.flush();
-        synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
+
+        if (op == Protocol.AGG_QUANTITY) body.writeInt(aggregationManager.aggregateQuantity(product, days));
+        else if (op == Protocol.AGG_VOLUME) body.writeDouble(aggregationManager.aggregateVolume(product, days));
+        else if (op == Protocol.AGG_AVG_PRICE) body.writeDouble(aggregationManager.aggregateAvgPrice(product, days));
+        else if (op == Protocol.AGG_MAX_PRICE) body.writeDouble(aggregationManager.aggregateMaxPrice(product, days));
+
+        writeMessage(dout, reqId, Protocol.RESPONSE, bout.toByteArray());
     }
 
-    private void handleWaitConsecutive(int reqId, byte[] payload, DataOutputStream dout, Object outLock) throws IOException {
-        if (!authenticated.get()) {
-            writeError(dout, outLock, reqId, Protocol.STATUS_AUTH_REQUIRED, "Authenticate first");
-            return;
-        }
+    private void handleWaitSimultaneous(int reqId, byte[] payload, DataOutputStream dout) throws IOException {
+        if (!checkAuth(dout, reqId)) return;
+
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));
-        int n = in.readInt();
-        String productResult = null;
         try {
-            productResult = notificationManager.waitConsecutive(n);
-        } catch (InterruptedException ie) {
+            boolean result = notificationManager.waitSimultaneous(IOUtils.readString(in), IOUtils.readString(in));
+            ByteArrayOutputStream bout = new ByteArrayOutputStream();
+            DataOutputStream body = new DataOutputStream(bout);
+            body.writeByte(Protocol.STATUS_OK);
+            body.writeByte(result ? (byte)1 : (byte)0);
+            writeMessage(dout, reqId, Protocol.RESPONSE, bout.toByteArray());
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            writeError(dout, outLock, reqId, Protocol.STATUS_INTERNAL_ERROR, "Interrupted");
-            return;
         }
-        ByteArrayOutputStream bout = new ByteArrayOutputStream();
-        DataOutputStream body = new DataOutputStream(bout);
-        body.writeByte(Protocol.STATUS_OK);
-        if (productResult != null) {
-            body.writeByte((byte)1);
-            IOUtils.writeString(body, productResult);
-        } else {
-            body.writeByte((byte)0);
-        }
-        body.flush();
-        synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
     }
 
-    private void writeError(DataOutputStream dout, Object outLock, int reqId, byte status, String msg) throws IOException {
+    private void handleWaitConsecutive(int reqId, byte[] payload, DataOutputStream dout) throws IOException {
+        if (!checkAuth(dout, reqId)) return;
+
+        DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));
+        try {
+            String res = notificationManager.waitConsecutive(in.readInt());
+            ByteArrayOutputStream bout = new ByteArrayOutputStream();
+            DataOutputStream body = new DataOutputStream(bout);
+            body.writeByte(Protocol.STATUS_OK);
+            if (res != null) {
+                body.writeByte((byte)1);
+                IOUtils.writeString(body, res);
+            } else body.writeByte((byte)0);
+            writeMessage(dout, reqId, Protocol.RESPONSE, bout.toByteArray());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    // Auxiliares
+
+    private boolean checkAuth(DataOutputStream dout, int reqId) throws IOException {
+        stateLock.lock();
+        try {
+            if (authenticated) return true;
+        } finally {
+            stateLock.unlock();
+        }
+        writeError(dout, reqId, Protocol.STATUS_AUTH_REQUIRED, "Login required");
+        return false;
+    }
+
+    private void sendSimpleResponse(DataOutputStream dout, int reqId, byte status) throws IOException {
+        byte[] p = {status};
+        writeMessage(dout, reqId, Protocol.RESPONSE, p);
+    }
+
+    private void writeError(DataOutputStream dout, int reqId, byte status, String msg) throws IOException {
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         DataOutputStream body = new DataOutputStream(bout);
         body.writeByte(status);
         IOUtils.writeString(body, msg);
-        body.flush();
-        synchronized (outLock) { new Message(reqId, Protocol.RESPONSE, bout.toByteArray()).writeTo(dout); }
+        writeMessage(dout, reqId, Protocol.RESPONSE, bout.toByteArray());
+    }
+
+    private void writeMessage(DataOutputStream dout, int reqId, byte op, byte[] payload) throws IOException {
+        Message m = new Message(reqId, op, payload);
+        outLock.lock();
+        try {
+            m.writeTo(dout);
+            dout.flush();
+        } finally {
+            outLock.unlock();
+        }
     }
 }

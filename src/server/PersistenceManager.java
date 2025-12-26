@@ -7,7 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- PersistenceManager: grava e lê séries de eventos por dia no disco.
+ * PersistenceManager: grava e lê séries de eventos por dia no disco.
+ * Mantido simples, pois a coordenação de acesso a ficheiros é gerida pelos Managers superiores.
  */
 public class PersistenceManager {
     private final File baseDir;
@@ -27,12 +28,15 @@ public class PersistenceManager {
         return new File(baseDir, "day-" + dayIndex + ".bin");
     }
 
-    // Persiste a lista de eventos para o dia especificado.
-    // Escreve primeiro para um ficheiro temporário e depois faz rename para reduzir risco de ficheiro corrupto.
+    /**
+     * Persiste a lista de eventos para o dia especificado.
+     * Implementação robusta com ficheiro temporário para evitar corrupção em caso de falha.
+     */
     public void persistDay(int dayIndex, List<Event> events) throws IOException {
         File target = dayFile(dayIndex);
         File tmp = new File(baseDir, "day-" + dayIndex + ".bin.tmp");
 
+        // Escrita utilizando DataOutputStream (API permitida)
         try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(tmp)))) {
             out.writeInt(events.size());
             for (Event e : events) {
@@ -41,8 +45,9 @@ public class PersistenceManager {
             out.flush();
         }
 
-        // tenta renomear (se falhar, faz cópia e remove tmp)
+        // Tenta renomear o ficheiro (operação atómica no SO)
         if (!tmp.renameTo(target)) {
+            // Caso o rename falhe (comum em alguns sistemas se o ficheiro já existir), faz cópia manual
             try (InputStream in = new BufferedInputStream(new FileInputStream(tmp));
                  OutputStream os = new BufferedOutputStream(new FileOutputStream(target))) {
                 byte[] buf = new byte[8192];
@@ -57,7 +62,6 @@ public class PersistenceManager {
         }
     }
 
-    // Lê a série completa do dia para memória. Usar apenas se a série couber em memória.
     public List<Event> readDay(int dayIndex) throws IOException {
         File f = dayFile(dayIndex);
         if (!f.exists()) throw new FileNotFoundException("Day file not found: " + f.getAbsolutePath());
@@ -73,13 +77,13 @@ public class PersistenceManager {
         return result;
     }
 
-    // Interface para processamento de eventos durante leitura em streaming.
     public interface EventHandler {
         void handle(Event e) throws IOException;
     }
 
-    // Lê o ficheiro do dia e processa cada evento invocando o handler.
-    // Esta operação processa evento-a-evento e não carrega a série inteira em memória.
+    /**
+     * Processamento em streaming para evitar carregar dias inteiros em memória.
+     */
     public void streamDay(int dayIndex, EventHandler handler) throws IOException {
         File f = dayFile(dayIndex);
         if (!f.exists()) throw new FileNotFoundException("Day file not found: " + f.getAbsolutePath());
@@ -93,18 +97,15 @@ public class PersistenceManager {
         }
     }
 
-    // Verifica se existe ficheiro persistido para o dia.
     public boolean dayExists(int dayIndex) {
         return dayFile(dayIndex).exists();
     }
 
-    // Elimina ficheiro do dia (útil para limpeza em cenários de teste).
     public boolean deleteDay(int dayIndex) {
         File f = dayFile(dayIndex);
         return f.exists() && f.delete();
     }
 
-    // Lista os índices dos dias que têm ficheiros persistidos (ordem não garantida).
     public List<Integer> listPersistedDays() {
         List<Integer> res = new ArrayList<>();
         File[] files = baseDir.listFiles();
@@ -113,7 +114,7 @@ public class PersistenceManager {
             String name = f.getName();
             if (name.startsWith("day-") && name.endsWith(".bin")) {
                 try {
-                    String num = name.substring(4, name.length() - 4); // remove "day-" e ".bin"
+                    String num = name.substring(4, name.length() - 4);
                     int idx = Integer.parseInt(num);
                     res.add(idx);
                 } catch (NumberFormatException ignored) {}
