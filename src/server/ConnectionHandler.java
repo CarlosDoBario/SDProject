@@ -97,6 +97,9 @@ public class ConnectionHandler implements Runnable {
             case Protocol.AGG_MAX_PRICE:
                 handleAggregation(reqId, op, payload, dout);
                 break;
+            case Protocol.FILTER_EVENTS:
+                handleFilter(reqId, op, payload, dout);
+                break;
             case Protocol.WAIT_SIMULTANEOUS:
                 handleWaitSimultaneous(reqId, payload, dout);
                 break;
@@ -175,6 +178,25 @@ public class ConnectionHandler implements Runnable {
     }
 
     private void handleAggregation(int reqId, byte op, byte[] payload, DataOutputStream dout) throws IOException {
+        if (!checkAuth(dout, reqId)) return;
+
+        DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));
+        String product = IOUtils.readString(in);
+        int days = in.readInt();
+
+        ByteArrayOutputStream bout = new ByteArrayOutputStream();
+        DataOutputStream body = new DataOutputStream(bout);
+        body.writeByte(Protocol.STATUS_OK);
+
+        if (op == Protocol.AGG_QUANTITY) body.writeInt(aggregationManager.aggregateQuantity(product, days));
+        else if (op == Protocol.AGG_VOLUME) body.writeDouble(aggregationManager.aggregateVolume(product, days));
+        else if (op == Protocol.AGG_AVG_PRICE) body.writeDouble(aggregationManager.aggregateAvgPrice(product, days));
+        else if (op == Protocol.AGG_MAX_PRICE) body.writeDouble(aggregationManager.aggregateMaxPrice(product, days));
+
+        writeMessage(dout, reqId, Protocol.RESPONSE, bout.toByteArray());
+    }
+
+    private void handleFilter(int reqId, byte op, byte[] payload, DataOutputStream dout) throws IOException {
         if (!checkAuth(dout, reqId)) return;
 
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));

@@ -3,9 +3,11 @@ package server;
 import server.model.Event;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -27,6 +29,7 @@ public class AggregationManager {
         double volume = 0.0;
         double maxPrice = 0.0;
         int countEvents = 0;
+        ArrayList<Event> events = null;
 
         void incorporate(Event e) {
             int q = e.getQuantity();
@@ -35,6 +38,7 @@ public class AggregationManager {
             volume += p * q;
             if (countEvents == 0 || p > maxPrice) maxPrice = p;
             countEvents++;
+            events.add(e);
         }
     }
 
@@ -175,6 +179,15 @@ public class AggregationManager {
             }
         }
         return any ? max : 0.0;
+    }
+
+    public Map<String, List<Event>> filterByProducts(List<String> products, int d) throws IOException {
+        Map<String, List<Event>> res = new HashMap<>();
+        for(String productName : products){
+            PerDayAgg p = getPerDayAggForProduct(d, productName);
+            res.put(productName, p.events);
+        }
+        return res;
     }
 
     public void clearCache() {
