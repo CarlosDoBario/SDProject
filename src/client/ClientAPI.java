@@ -160,6 +160,22 @@ public class ClientAPI implements AutoCloseable {
         return din.readDouble();
     }
 
+    public String filterByDay(int nProducts, String products, int d) throws IOException {
+        ByteArrayOutputStream bout = new ByteArrayOutputStream();
+        DataOutputStream dout = new DataOutputStream(bout);
+        dout.writeInt(nProducts);
+        IOUtils.writeString(dout, products);
+        dout.writeInt(d);
+        dout.flush();
+
+        Message resp = sendAndWait(Protocol.FILTER_EVENTS, bout.toByteArray());
+        if (resp == null) throw new IOException("No response from server");
+
+        DataInputStream din = payloadStream(resp);
+        ensureStatusOk(din);
+        return IOUtils.readString(din);
+    }
+
     public boolean waitSimultaneous(String p1, String p2) throws IOException {
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         DataOutputStream dout = new DataOutputStream(bout);

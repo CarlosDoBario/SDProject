@@ -23,6 +23,7 @@ public class ConnectionHandler implements Runnable {
     private final DayManager dayManager;
     private final PersistenceManager persistenceManager;
     private final AggregationManager aggregationManager;
+    private final FilterManager filterManager;
     private final NotificationManager notificationManager;
 
     private final ReentrantLock stateLock = new ReentrantLock();
@@ -36,12 +37,14 @@ public class ConnectionHandler implements Runnable {
                              DayManager dayManager,
                              PersistenceManager persistenceManager,
                              AggregationManager aggregationManager,
+                             FilterManager filterManager,
                              NotificationManager notificationManager) {
         this.socket = socket;
         this.authManager = authManager;
         this.dayManager = dayManager;
         this.persistenceManager = persistenceManager;
         this.aggregationManager = aggregationManager;
+        this.filterManager = filterManager;
         this.notificationManager = notificationManager;
     }
 
@@ -200,17 +203,15 @@ public class ConnectionHandler implements Runnable {
         if (!checkAuth(dout, reqId)) return;
 
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));
-        String product = IOUtils.readString(in);
-        int days = in.readInt();
+        int nProducts = in.readInt();
+        String products = IOUtils.readString(in);
+        int day = in.readInt();
 
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         DataOutputStream body = new DataOutputStream(bout);
         body.writeByte(Protocol.STATUS_OK);
 
-        if (op == Protocol.AGG_QUANTITY) body.writeInt(aggregationManager.aggregateQuantity(product, days));
-        else if (op == Protocol.AGG_VOLUME) body.writeDouble(aggregationManager.aggregateVolume(product, days));
-        else if (op == Protocol.AGG_AVG_PRICE) body.writeDouble(aggregationManager.aggregateAvgPrice(product, days));
-        else if (op == Protocol.AGG_MAX_PRICE) body.writeDouble(aggregationManager.aggregateMaxPrice(product, days));
+        IOUtils.writeString(body, filterManager.filterByProducts(nProducts, products, day));
 
         writeMessage(dout, reqId, Protocol.RESPONSE, bout.toByteArray());
     }

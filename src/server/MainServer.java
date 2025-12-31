@@ -27,6 +27,7 @@ public class MainServer {
 
         DayManager dm = new DayManager(nextDayIndex);
         AggregationManager am = new AggregationManager(dm, pm);
+        FilterManager fm = new FilterManager(dm, pm);
         NotificationManager nm = new NotificationManager(dm);
 
         System.out.println("Servidor iniciado no porto " + port + ". Dia atual: " + nextDayIndex);
@@ -34,7 +35,7 @@ public class MainServer {
         try (ServerSocket ss = new ServerSocket(port)) {
             while (true) {
                 Socket client = ss.accept();
-                ConnectionHandler handler = new ConnectionHandler(client, auth, dm, pm, am, nm);
+                ConnectionHandler handler = new ConnectionHandler(client, auth, dm, pm, am, fm, nm);
                 new Thread(handler).start(); // Thread manual por conexão
             }
         }
