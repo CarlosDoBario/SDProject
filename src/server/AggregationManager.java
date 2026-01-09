@@ -10,11 +10,6 @@ import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * AgregationManager adaptado:
- * - Remoção de blocos synchronized.
- * - Uso de ReentrantLock e Condition para gestão de cache e carregamentos.
- */
 public class AggregationManager {
     private final DayManager dayManager;
     private final PersistenceManager persistenceManager;
@@ -38,7 +33,6 @@ public class AggregationManager {
         }
     }
 
-    // Lock para proteger a cache e o conjunto de dias em carregamento
     private final ReentrantLock cacheLock = new ReentrantLock();
     private final Condition loadFinished = cacheLock.newCondition();
 
@@ -69,11 +63,9 @@ public class AggregationManager {
                 }
 
                 if (!loadingDays.contains(dayIndex)) {
-                    // Ninguém está a carregar este dia, esta thread assume a tarefa
                     loadingDays.add(dayIndex);
                     break;
                 } else {
-                    // Outra thread está a carregar, aguardamos na Condition
                     try {
                         loadFinished.await();
                     } catch (InterruptedException ie) {
@@ -86,7 +78,6 @@ public class AggregationManager {
             cacheLock.unlock();
         }
 
-        // Fora do lock: Carregar do disco (IO demorado)
         PerDayAgg agg = new PerDayAgg();
         try {
             if (persistenceManager.dayExists(dayIndex)) {
@@ -97,7 +88,6 @@ public class AggregationManager {
                 });
             }
         } finally {
-            // Re-entrar no lock para atualizar a cache e sinalizar outras threads
             cacheLock.lock();
             try {
                 loadingDays.remove(dayIndex);

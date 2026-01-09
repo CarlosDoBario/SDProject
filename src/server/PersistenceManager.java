@@ -6,10 +6,6 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * PersistenceManager: grava e lê séries de eventos por dia no disco.
- * Mantido simples, pois a coordenação de acesso a ficheiros é gerida pelos Managers superiores.
- */
 public class PersistenceManager {
     private final File baseDir;
 
@@ -28,15 +24,10 @@ public class PersistenceManager {
         return new File(baseDir, "day-" + dayIndex + ".bin");
     }
 
-    /**
-     * Persiste a lista de eventos para o dia especificado.
-     * Implementação robusta com ficheiro temporário para evitar corrupção em caso de falha.
-     */
     public void persistDay(int dayIndex, List<Event> events) throws IOException {
         File target = dayFile(dayIndex);
         File tmp = new File(baseDir, "day-" + dayIndex + ".bin.tmp");
 
-        // Escrita utilizando DataOutputStream (API permitida)
         try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(tmp)))) {
             out.writeInt(events.size());
             for (Event e : events) {
@@ -45,9 +36,7 @@ public class PersistenceManager {
             out.flush();
         }
 
-        // Tenta renomear o ficheiro (operação atómica no SO)
         if (!tmp.renameTo(target)) {
-            // Caso o rename falhe (comum em alguns sistemas se o ficheiro já existir), faz cópia manual
             try (InputStream in = new BufferedInputStream(new FileInputStream(tmp));
                  OutputStream os = new BufferedOutputStream(new FileOutputStream(target))) {
                 byte[] buf = new byte[8192];
@@ -81,9 +70,6 @@ public class PersistenceManager {
         void handle(Event e) throws IOException;
     }
 
-    /**
-     * Processamento em streaming para evitar carregar dias inteiros em memória.
-     */
     public void streamDay(int dayIndex, EventHandler handler) throws IOException {
         File f = dayFile(dayIndex);
         if (!f.exists()) throw new FileNotFoundException("Day file not found: " + f.getAbsolutePath());

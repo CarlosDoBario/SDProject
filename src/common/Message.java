@@ -7,8 +7,6 @@ import java.io.IOException;
 import java.util.Arrays;
 
 /**
- Representação simples de uma mensagem do protocolo com utilitários de leitura/escrita.
-
  Formato do protocolo:
    - totalLength: int (4)  -> nº de bytes seguintes (requestId + opCode + payload)
    - requestId:   int (4)

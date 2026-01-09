@@ -1,12 +1,8 @@
 package common;
 
-/**
- * Constantes do protocolo: opcodes e códigos de status. Usá-las no cliente e servidor
- */
 public final class Protocol {
     private Protocol() {}
 
-    // Opcodes (byte)
     public static final byte HELLO = 0x00;
     public static final byte REGISTER = 0x01;
     public static final byte LOGIN = 0x02;
@@ -27,10 +23,9 @@ public final class Protocol {
 
     public static final byte HEARTBEAT = 0x50;
 
-    public static final byte RESPONSE = 0x7F;     // genérico: status + payload
-    public static final byte SERVER_PUSH = 0x70;  // requestId == 0
+    public static final byte RESPONSE = 0x7F;
+    public static final byte SERVER_PUSH = 0x70;
 
-    // Response status codes (byte)
     public static final byte STATUS_OK = 0x00;
     public static final byte STATUS_AUTH_REQUIRED = 0x01;
     public static final byte STATUS_INVALID_CREDENTIALS = 0x02;

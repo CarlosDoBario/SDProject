@@ -10,19 +10,13 @@ import java.net.Socket;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Estratégia:
- * - Loop principal lê mensagens do socket (Message.readFrom).
- * - Cada pedido é processado numa nova Thread manual (em vez de ExecutorService).
- * - Estado de autenticação protegido por stateLock (em vez de AtomicBoolean).
- * - Escrita ao DataOutputStream sincronizada com outLock (ReentrantLock).
- */
 public class ConnectionHandler implements Runnable {
     private final Socket socket;
     private final AuthManager authManager;
     private final DayManager dayManager;
     private final PersistenceManager persistenceManager;
     private final AggregationManager aggregationManager;
+    private final FilterManager filterManager;
     private final NotificationManager notificationManager;
 
     private final ReentrantLock stateLock = new ReentrantLock();
@@ -36,12 +30,14 @@ public class ConnectionHandler implements Runnable {
                              DayManager dayManager,
                              PersistenceManager persistenceManager,
                              AggregationManager aggregationManager,
+                             FilterManager filterManager,
                              NotificationManager notificationManager) {
         this.socket = socket;
         this.authManager = authManager;
         this.dayManager = dayManager;
         this.persistenceManager = persistenceManager;
         this.aggregationManager = aggregationManager;
+        this.filterManager = filterManager;
         this.notificationManager = notificationManager;
     }
 
@@ -54,7 +50,6 @@ public class ConnectionHandler implements Runnable {
                 Message req = Message.readFrom(din);
                 if (req == null) break;
 
-                // Processamento concorrente por conexão via Threads manuais
                 new Thread(() -> {
                     try {
                         handleRequest(req, dout);
@@ -96,6 +91,9 @@ public class ConnectionHandler implements Runnable {
             case Protocol.AGG_AVG_PRICE:
             case Protocol.AGG_MAX_PRICE:
                 handleAggregation(reqId, op, payload, dout);
+                break;
+            case Protocol.FILTER_EVENTS:
+                handleFilter(reqId, op, payload, dout);
                 break;
             case Protocol.WAIT_SIMULTANEOUS:
                 handleWaitSimultaneous(reqId, payload, dout);
@@ -189,6 +187,23 @@ public class ConnectionHandler implements Runnable {
         else if (op == Protocol.AGG_VOLUME) body.writeDouble(aggregationManager.aggregateVolume(product, days));
         else if (op == Protocol.AGG_AVG_PRICE) body.writeDouble(aggregationManager.aggregateAvgPrice(product, days));
         else if (op == Protocol.AGG_MAX_PRICE) body.writeDouble(aggregationManager.aggregateMaxPrice(product, days));
+
+        writeMessage(dout, reqId, Protocol.RESPONSE, bout.toByteArray());
+    }
+
+    private void handleFilter(int reqId, byte op, byte[] payload, DataOutputStream dout) throws IOException {
+        if (!checkAuth(dout, reqId)) return;
+
+        DataInputStream in = new DataInputStream(new ByteArrayInputStream(payload));
+        int nProducts = in.readInt();
+        String products = IOUtils.readString(in);
+        int day = in.readInt();
+
+        ByteArrayOutputStream bout = new ByteArrayOutputStream();
+        DataOutputStream body = new DataOutputStream(bout);
+        body.writeByte(Protocol.STATUS_OK);
+
+        IOUtils.writeString(body, filterManager.filterByProducts(nProducts, products, day));
 
         writeMessage(dout, reqId, Protocol.RESPONSE, bout.toByteArray());
     }

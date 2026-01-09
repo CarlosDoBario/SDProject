@@ -34,7 +34,6 @@ public class AuthManager {
     }
 
     private void saveUsers() {
-        // Assume-se que o lock já está detido por quem chama saveUsers ou detém aqui
         try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(authFile)))) {
             out.writeInt(users.size());
             for (Map.Entry<String, String> entry : users.entrySet()) {

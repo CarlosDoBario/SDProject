@@ -6,10 +6,6 @@ import client.ClientConnection;
 import java.time.Instant;
 import java.util.Scanner;
 
-/**
- * ConsoleUI - interface de consola adaptada para a ClientAPI síncrona.
- * Removidas referências a TimeoutException e APIs de concorrência.
- */
 public class ConsoleUI {
     private final String host;
     private final int port;
@@ -130,7 +126,21 @@ public class ConsoleUI {
                                 System.err.println("Aggregation failed: " + e.getMessage());
                             }
                             break;
-                        case "9": // wait simultaneous
+                        case "9": // filter events on day d
+                            System.out.print("How many products: ");
+                            int filn = Integer.parseInt(sc.nextLine().trim());
+                            System.out.print("products: ");
+                            String filp = sc.nextLine().trim();
+                            System.out.print("d (day): ");
+                            int fild = Integer.parseInt(sc.nextLine().trim());
+                            try {
+                                String res = api.filterByDay(filn, filp, fild);
+                                System.out.println("Events mentioning " + filp +" on day " + fild + ":\n" + res);
+                            } catch (Exception e) {
+                                System.err.println("Filter failed: " + e.getMessage());
+                            }
+                            break;
+                        case "10": // wait simultaneous
                             System.out.print("product1: ");
                             String w1 = sc.nextLine().trim();
                             System.out.print("product2: ");
@@ -143,7 +153,7 @@ public class ConsoleUI {
                                 System.err.println("waitSimultaneous failed: " + e.getMessage());
                             }
                             break;
-                        case "10": // wait consecutive
+                        case "11": // wait consecutive
                             System.out.print("n (consecutive sales): ");
                             int n = Integer.parseInt(sc.nextLine().trim());
                             try {
@@ -175,8 +185,8 @@ public class ConsoleUI {
         System.out.println("3) Add Event         4) Advance Day");
         System.out.println("5) Agg: Quantity     6) Agg: Volume");
         System.out.println("7) Agg: Avg Price    8) Agg: Max Price");
-        System.out.println("9) Wait Simultaneous 10) Wait Consecutive");
-        System.out.println("x) Exit");
+        System.out.println("9) Filter Events     10) Wait Simultaneous");
+        System.out.println("11) Wait Consecutive x) Exit");
     }
 
     public static void main(String[] args) {

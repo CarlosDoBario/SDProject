@@ -3,16 +3,14 @@ package server;
 import server.model.Event;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-/**
- * Gestão do dia corrente.
- * Permite inicializar com um dia específico para suportar reinícios do servidor.
- */
 public class DayManager {
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final List<Event> currentDay = new ArrayList<>();
-    private int dayIndex; // Removido o final para permitir inicialização
+    private int dayIndex;
 
     private final ReentrantLock listenersLock = new ReentrantLock();
     private final List<EventListener> listeners = new ArrayList<>();
@@ -21,17 +19,16 @@ public class DayManager {
         void onEvent(Event e);
     }
 
-    // Construtor essencial para a persistência: permite ao MainServer definir o dia atual
     public DayManager(int startDay) {
         this.dayIndex = startDay;
     }
 
     public void addEvent(Event e) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             currentDay.add(e);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();;
         }
         notifyListeners(e);
     }
@@ -64,23 +61,32 @@ public class DayManager {
     }
 
     public List<Event> closeCurrentDayAndStartNew() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             List<Event> toPersist = new ArrayList<>(currentDay);
             currentDay.clear();
             dayIndex++;
             return toPersist;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public int getDayIndex() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return dayIndex;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
+        }
+    }
+
+    public List<Event> getDayEvents() {
+        lock.readLock().lock();
+        try {
+            return new ArrayList<>(currentDay);
+        } finally {
+            lock.readLock().unlock();
         }
     }
 }

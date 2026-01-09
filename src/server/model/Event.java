@@ -7,9 +7,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Objects;
 
-/**
- Modelo para um evento de venda.
- */
 public final class Event {
     private final String productName;
     private final int quantity;
@@ -39,7 +36,6 @@ public final class Event {
         return timestamp;
     }
 
-    // Serializa o evento para o stream usando IOUtils para a string.
     public void writeTo(DataOutputStream out) throws IOException {
         IOUtils.writeString(out, productName);
         out.writeInt(quantity);
@@ -47,7 +43,6 @@ public final class Event {
         out.writeLong(timestamp);
     }
 
-    // Lê um evento do stream que foi escrito com writeTo. Retorna uma nova instância Event.
     public static Event readFrom(DataInputStream in) throws IOException {
         String product = IOUtils.readString(in);
         int qty = in.readInt();

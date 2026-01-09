@@ -4,25 +4,50 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f712e36a-134f-473f-9ad5-6d9f16c0db34" name="Changes" comment="Projeto a corrrer (falta filtragem)">
+    <list default="true" id="f712e36a-134f-473f-9ad5-6d9f16c0db34" name="Changes" comment="Projeto com alterações - primitivas simples">
+      <change afterPath="$PROJECT_DIR$/src/server/FilterManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/users.bin" beforeDir="false" afterPath="$PROJECT_DIR$/data/users.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/client/ClientAPI.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/client/ClientAPI.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/common/IOUtils.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/common/IOUtils.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/common/Message.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/common/Message.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/common/Protocol.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/common/Protocol.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/server/AggregationManager$PerDayAgg.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/server/AggregationManager$PerDayAgg.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/server/AggregationManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/server/AggregationManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/server/AuthManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/server/AuthManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/server/ConnectionHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/server/ConnectionHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/server/DayManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/server/DayManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/server/MainServer.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/server/MainServer.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/SDProject/server/NotificationManager$ConsWaiter.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/server/NotificationManager$ConsWaiter.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/SDProject/server/NotificationManager$SimWaiter.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/server/NotificationManager$SimWaiter.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/SDProject/server/NotificationManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/server/NotificationManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/server/PersistenceManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/server/PersistenceManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/SDProject/ui/ConsoleUI.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/SDProject/ui/ConsoleUI.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/client/ClientAPI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/client/ClientAPI.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/client/ClientConnection.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/client/ClientConnection.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/common/IOUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/IOUtils.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/common/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/Message.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/common/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/Protocol.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/server/AggregationManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/server/AggregationManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/server/AuthManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/server/AuthManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/server/ConnectionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/server/ConnectionHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/server/DayManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/server/DayManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/server/MainServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/server/MainServer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/server/NotificationManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/server/NotificationManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/server/PersistenceManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/server/PersistenceManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/server/model/Event.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/server/model/Event.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ui/ConsoleUI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/ConsoleUI.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -74,7 +99,7 @@
       <recent name="C:\Users\lenovo\IdeaProjects\SDProject\src" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.Consola">
+  <component name="RunManager" selected="Application.Consola2">
     <configuration name="Consola" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="ui.ConsoleUI" />
       <module name="SDProject" />
@@ -200,7 +225,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764013176818</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="Projeto com alterações - primitivas simples">
+      <option name="closed" value="true" />
+      <created>1766769837845</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1766769837845</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -224,6 +257,7 @@
     <MESSAGE value="Implementação da API do cliente" />
     <MESSAGE value="Implementação da consolaUI" />
     <MESSAGE value="Projeto a corrrer (falta filtragem)" />
-    <option name="LAST_COMMIT_MESSAGE" value="Projeto a corrrer (falta filtragem)" />
+    <MESSAGE value="Projeto com alterações - primitivas simples" />
+    <option name="LAST_COMMIT_MESSAGE" value="Projeto com alterações - primitivas simples" />
   </component>
 </project>

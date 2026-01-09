@@ -7,10 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Utilitários simples para serializar/deserializar tipos usados pelo protocolo.
- * Formato de string: [len:int][utf8-bytes], com len == -1 significando null.
- */
 public final class IOUtils {
     private IOUtils() {}
 

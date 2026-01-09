@@ -9,9 +9,6 @@ import java.util.Set;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * NotificationManager adaptado para garantir uso exclusivo de ReentrantLock.
- */
 public class NotificationManager {
     private final ReentrantLock lock = new ReentrantLock();
     private int dayGeneration = 0;
@@ -154,7 +151,6 @@ public class NotificationManager {
         lock.lock();
         try {
             dayGeneration++;
-            // Notificar todos os que esperam pelo fim do dia
             for (SimWaiter w : simWaiters) {
                 w.cond.signalAll();
             }

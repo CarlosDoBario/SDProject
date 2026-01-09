@@ -11,10 +11,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.time.Duration;
 
-/**
- * ClientAPI: API síncrona sobre ClientConnection.
- * Adaptada para utilizar a nova interface síncrona da ClientConnection sem CompletableFuture.
- */
 public class ClientAPI implements AutoCloseable {
     private final ClientConnection conn;
 
@@ -22,9 +18,6 @@ public class ClientAPI implements AutoCloseable {
         this.conn = conn;
     }
 
-    // O método sendRequest da ClientConnection agora é síncrono e bloqueante.
-    // O suporte a timeouts manuais com estas primitivas simples exigiria o uso de awaitNanos,
-    // mas seguindo a lógica de simplificação para SD, o envio passa a ser direto.
     private Message sendAndWait(byte opCode, byte[] payload) throws IOException {
         return conn.sendRequest(opCode, payload);
     }
@@ -158,6 +151,22 @@ public class ClientAPI implements AutoCloseable {
         DataInputStream din = payloadStream(resp);
         ensureStatusOk(din);
         return din.readDouble();
+    }
+
+    public String filterByDay(int nProducts, String products, int d) throws IOException {
+        ByteArrayOutputStream bout = new ByteArrayOutputStream();
+        DataOutputStream dout = new DataOutputStream(bout);
+        dout.writeInt(nProducts);
+        IOUtils.writeString(dout, products);
+        dout.writeInt(d);
+        dout.flush();
+
+        Message resp = sendAndWait(Protocol.FILTER_EVENTS, bout.toByteArray());
+        if (resp == null) throw new IOException("No response from server");
+
+        DataInputStream din = payloadStream(resp);
+        ensureStatusOk(din);
+        return IOUtils.readString(din);
     }
 
     public boolean waitSimultaneous(String p1, String p2) throws IOException {
