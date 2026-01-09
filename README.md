@@ -1,8 +1,10 @@
 # SDProject
 
 Para correr o projeto: 
-  - 1 terminal para correr MainServer.java
-  - 2 terminais para correr ConsoleUi.java
+  Compilar o projeto: javac -d bin --source-path src src/server/*.java src/client/*.java src/common/*.java src/testes/*.java
+  Em 3 terminais :
+    - Em 1 terminal, iniciar o servidor: java -cp bin server.MainServer
+    - Em 2 terminais separados, para 2 clientes: java -cp bin ui.ConsoleUI
 
 Para correr os testes:
   1) Iniciar o servidor 
